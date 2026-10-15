@@ -1,4 +1,4 @@
-Engineering Manager in Portugal. Background in DevOps and Kubernetes, now building small robots with reinforcement learning and LeRobot.
+
 
 <!-- robot:start -->
 <p align="center">
