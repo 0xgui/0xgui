@@ -21,8 +21,8 @@ END = "<!-- robot:end -->"
 ZERO_SHA = "0" * 40
 EASTER_EGG_PERCENT = 2
 
-MOODS = ("sleeping", "idle", "busy", "overheating", "fell-over")
-LABELS = {"sleeping": "Sleeping", "idle": "Idle", "busy": "Busy", "overheating": "Overheating", "fell-over": "Fell over"}
+MOODS = ("sleeping", "idle", "busy", "ascending", "fell-over")
+LABELS = {"sleeping": "Sleeping", "idle": "Idle", "busy": "Busy", "ascending": "Ascending", "fell-over": "Fell over"}
 ALTS = {m: f"Robot is {m}" for m in MOODS} | {"fell-over": "Robot fell over"}
 WORKFLOW_URL = f"https://github.com/{USER}/{USER}/actions/workflows/robot.yml"
 DATE_PREFIX = "Last changed "
@@ -80,7 +80,7 @@ def mood_for(count, day):
         return "idle"
     if count <= 20:
         return "busy"
-    return "overheating"
+    return "ascending"
 
 
 def render(mood, count, day):

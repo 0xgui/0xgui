@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate the mood SVGs in assets/. Run after editing the art: python3 scripts/draw_robots.py"""
 
+import math
 import os
 
 BODY, SHADE, LINE = "#7B9CFF", "#5A78E6", "#2E3A6E"
@@ -110,26 +111,61 @@ MOODS["busy"] = svg("busy",
         arms=arm("l") + arm("r") + "|" + laptop + arm("l").replace('class="arm', 'class="arm hand') + arm("r").replace('class="arm', 'class="arm hand'))
     .replace('g class="arm l"', 'g class="arm l" opacity="0"', 1).replace('g class="arm r"', 'g class="arm r" opacity="0"', 1) + code)
 
-steam = ''.join(f'<circle class="steam s{i}" cx="{x}" cy="40" r="{r}" fill="#AFB9D1"/>' for i, (x, r) in enumerate([(84, 7), (156, 8), (120, 6)]))
-sparks = ''.join(f'<path class="spark k{i}" d="{d}" fill="{GOLD}" stroke="{LINE}" stroke-width="1.5" stroke-linejoin="round"/>'
-                 for i, d in enumerate(["M22 86l10-4-4 10 10-3-14 14 4-10-10 3z", "M206 120l12-5-5 12 11-3-16 15 5-11-11 3z"]))
-MOODS["overheating"] = svg("overheating",
-    ARMS_REST.replace("12deg", "40deg").replace("-12deg", "-40deg").replace("rotate(40deg);transform-origin:177", "rotate(-40deg);transform-origin:177") +
-    '.bot{animation:shake .14s linear infinite}'
-    '@keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}75%{transform:translate(2px,-1px)}}'
-    '.glow{animation:glow 1.2s ease-in-out infinite;transform-origin:120px 140px}'
-    '@keyframes glow{0%,100%{opacity:.35;transform:scale(.94)}50%{opacity:.7;transform:scale(1.04)}}'
-    '.ball{animation:alarm .5s steps(1) infinite}@keyframes alarm{50%{fill:#FFD7D7}}'
-    '.steam{opacity:0;animation:rise 2.1s ease-out infinite}.s1{animation-delay:.7s}.s2{animation-delay:1.4s}'
-    '@keyframes rise{0%{opacity:0;transform:translateY(14px) scale(.6)}25%{opacity:.9}100%{opacity:0;transform:translateY(-28px) scale(1.5)}}'
-    '.spark{animation:zap .9s steps(1) infinite}.k1{animation-delay:.45s}@keyframes zap{50%{opacity:0}}',
-    '<defs><radialGradient id="g"><stop offset="0" stop-color="#FF4D4D"/><stop offset="1" stop-color="#FF4D4D" stop-opacity="0"/></radialGradient></defs>'
-    '<ellipse class="glow" cx="120" cy="140" rx="118" ry="122" fill="url(#g)"/>' + shadow() +
-    '<g class="bot">' + robot(
-        '<path d="M88 96l16 9-16 9M152 96l-16 9 16 9" fill="none" stroke="#FF6B5B" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
-        '<path d="M104 128q4-6 8 0t8 0 8 0 8 0" fill="none" stroke="#FF6B5B" stroke-width="3.5" stroke-linecap="round"/>'
-        '<path d="M170 78q6 8 0 12-6-4 0-12z" fill="#7CD8FF"/>',
-        chest=chest_lights(("#FF6B5B", "#FF6B5B", "#FF6B5B")), ball="#FF5B5B", screen="#2A1C2E") + '</g>' + steam + sparks)
+
+def tongue(w, h):
+    """One flame tongue, base at 0 0 and tip pointing up; leans a little so it reads as fire."""
+    return (f"M{-w} 0C{-w} {-h * .45:.0f} {w * .2:.0f} {-h * .55:.0f} {w * .5:.0f} {-h}"
+            f"C{w * .1:.0f} {-h * .6:.0f} {w} {-h * .45:.0f} {w} 0Q0 {w * .9:.0f} {-w} 0z")
+
+
+bolt = "M0 0l9 14h-6l7 14-15-17h6z"
+bolts = ''.join(f'<path class="bolt b{i}" transform="translate({x} {y}) rotate({r}) scale(1.5)" d="{bolt}" fill="#FFF3B0" stroke="{LINE}" stroke-width="1.6" stroke-linejoin="round"/>'
+                for i, (x, y, r) in enumerate([(16, 62, -10), (206, 150, 14), (198, 50, 12), (20, 160, -8)]))
+rocks = ''.join(f'<path class="rock r{i}" d="M{x} 246l6-6 8 2 3 7-7 4-8-1z" fill="#8C96B4" stroke="{LINE}" stroke-width="1.5" stroke-linejoin="round"/>'
+                for i, x in enumerate([22, 200]))
+# x, y, angle, scale of each flame tongue around the robot (left side is mirrored so flames lean outward)
+TONGUES = [(52, 212, -24, .9), (40, 160, -16, 1), (46, 106, -10, 1), (72, 72, -8, .85), (102, 62, -3, .85), (120, 64, 0, .9)]
+INNER = [(64, 196, -18, .7), (58, 134, -10, .8), (92, 80, -4, .75), (120, 74, 0, .8)]
+
+
+def flames(spots, fill=""):
+    """Each left-side spot plus its mirror on the right; the middle one is drawn once."""
+    out = ""
+    for x, y, r, k in spots:
+        for sx, sr, sk in ((x, r, -k), (240 - x, -r, k))[(x == 120):]:
+            out += f'<g transform="translate({sx} {y}) rotate({sr}) scale({sk} {k})"><use class="t" href="#f"{fill}/></g>'
+    return out
+
+
+sparkle = "M0-7Q1-1 7 0Q1 1 0 7Q-1 1-7 0Q-1-1 0-7z"
+motes = (f'<g fill="#FFF3B0" stroke="{LINE}" stroke-width="1.3" stroke-linejoin="round">'
+         + ''.join(f'<g transform="translate({x} 228) scale({k})"><path class="mote" d="{sparkle}"/></g>'
+                   for x, k in ([(30, 1), (210, .9), (62, .7), (180, .8), (14, .6), (228, .6)])) + '</g>')
+MOODS["ascending"] = svg("ascending",
+    'g.arm.l{transform:rotate(24deg);transform-origin:63px 170px}g.arm.r{transform:rotate(-24deg);transform-origin:177px 170px}'
+    '.bot{animation:lift 2.4s ease-in-out infinite}'
+    '@keyframes lift{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}'
+    '.t{transform-origin:0 0;animation:fl .42s ease-in-out infinite alternate}g:nth-child(odd)>.t{animation-delay:-.21s}g:nth-child(3n)>.t{animation-duration:.33s}'
+    '@keyframes fl{from{transform:scale(.92,.82) skewX(-4deg)}to{transform:scale(1.04,1.08) skewX(4deg)}}'
+    '.core{animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.85}}'
+    '.bolt{opacity:0;animation:zap 1.6s steps(1) infinite}.b1,.b3{animation-delay:.8s}'
+    '@keyframes zap{0%{opacity:1}12%{opacity:0}18%{opacity:1}26%{opacity:0}}'
+    '.mote{opacity:0;animation:rise 1.8s ease-in infinite}g:nth-child(2n)>.mote{animation-delay:-.9s}g:nth-child(3n)>.mote{animation-delay:-.45s}g:nth-child(5)>.mote{animation-delay:-1.35s}'
+    '@keyframes rise{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-260px)}}'
+    '.rock{animation:hover 2.4s ease-in-out infinite}.r1{animation-delay:-1.2s}'
+    '@keyframes hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}',
+    f'<defs><path id="f" d="{tongue(22, 62)}"/><radialGradient id="g" cy=".6"><stop offset="0" stop-color="#FFF8DC"/>'
+    '<stop offset=".6" stop-color="#FFD166"/><stop offset="1" stop-color="#FFB13B"/></radialGradient></defs>'
+    f'<ellipse cx="120" cy="250" rx="40" ry="5" fill="#FF9F1C" opacity=".3"/>{rocks}'
+    f'<g fill="#FFB13B" stroke="#F08A00" stroke-width="2" stroke-linejoin="round">{flames(TONGUES)}</g>'
+    '<ellipse class="core" cx="120" cy="134" rx="84" ry="92" fill="url(#g)"/>'
+    f'<g>{flames(INNER, chr(32) + "fill=\"#FFF3B0\"")}</g>'
+    '<g class="bot"><g transform="translate(17 2) scale(.86)">' + robot(
+        f'<rect x="88" y="92" width="22" height="26" rx="10" fill="#FFFBEA" stroke="{GOLD}" stroke-width="3"/>'
+        f'<rect x="130" y="92" width="22" height="26" rx="10" fill="#FFFBEA" stroke="{GOLD}" stroke-width="3"/>'
+        f'<path d="M84 84l26 8M156 84l-26 8" stroke="{GOLD}" stroke-width="4.5" stroke-linecap="round"/>'
+        f'<path d="M106 124q14 10 28 0z" fill="{GOLD}" stroke="{GOLD}" stroke-width="3" stroke-linejoin="round"/>',
+        chest=chest_lights((GOLD, "#FFFBEA", GOLD)), ball="#FFFBEA") + '</g></g>' + bolts + motes)
 
 zs = ''.join(f'<path class="z z{i}" d="M{x} {y}h{w}l-{w} {w}h{w}" fill="none" stroke="{c}" stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round"/>'
              for i, (x, y, w, sw, c) in enumerate([(168, 58, 11, 3.5, EYE), (184, 40, 14, 4, PANEL), (201, 20, 17, 4.5, EYE)]))
