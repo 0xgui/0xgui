@@ -1,14 +1,11 @@
 Engineering Manager in Portugal. Background in DevOps and Kubernetes, now building small robots with reinforcement learning and LeRobot.
 
 <!-- robot:start -->
-```
-    ~ ~ ~
-   .---.
-  [ @_@ ]  !!
-  /|###|\
-   d   b
-```
-Robot status: overheating (21 commits this week)
+<p align="center">
+  <img src="assets/overheating.svg" alt="Robot is overheating" width="220"><br>
+  <b>Overheating</b>: 21 commits in the last 7 days<br>
+  <sub>This robot updates itself every day from my public GitHub activity. <a href="https://github.com/0xgui/0xgui/actions/workflows/robot.yml">See how</a>. Last changed 2026-10-15.</sub>
+</p>
 <!-- robot:end -->
 
 ### Building

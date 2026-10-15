@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Rewrite the robot block in README.md based on public commits from the last 7 days."""
+"""Rewrite the robot block in README.md based on public commits from the last 7 days.
+
+The block is only rewritten when the mood or the count changes. Its date is the
+day of the last change, so the workflow does not commit every day just for a date.
+"""
 
 import argparse
 import datetime as dt
@@ -17,47 +21,11 @@ END = "<!-- robot:end -->"
 ZERO_SHA = "0" * 40
 EASTER_EGG_PERCENT = 2
 
-ROBOTS = {
-    "sleeping": r"""
-   .---.
-  [ -_- ]  z z Z
-  /|___|\
-   d   b
-""",
-    "idle": r"""
-   .---.
-  [ o_o ]
-  /|___|\
-   d   b
-""",
-    "busy": r"""
-   .---.
-  [ ^_^ ]/  *clack*
-  /|___|   *clack*
-   d   b
-""",
-    "overheating": r"""
-    ~ ~ ~
-   .---.
-  [ @_@ ]  !!
-  /|###|\
-   d   b
-""",
-    "fell over": r"""
-  *thunk*
-   _____ .---.
-  d|___|[ x_x ]
-  b      '---'
-""",
-}
-
-CAPTIONS = {
-    "sleeping": "Robot status: sleeping ({count} commits this week)",
-    "idle": "Robot status: idle ({count} commits this week)",
-    "busy": "Robot status: busy ({count} commits this week)",
-    "overheating": "Robot status: overheating ({count} commits this week)",
-    "fell over": "Robot status: fell over, standing back up ({count} commits this week)",
-}
+MOODS = ("sleeping", "idle", "busy", "overheating", "fell-over")
+LABELS = {"sleeping": "Sleeping", "idle": "Idle", "busy": "Busy", "overheating": "Overheating", "fell-over": "Fell over"}
+ALTS = {m: f"Robot is {m}" for m in MOODS} | {"fell-over": "Robot fell over"}
+WORKFLOW_URL = f"https://github.com/{USER}/{USER}/actions/workflows/robot.yml"
+DATE_PREFIX = "Last changed "
 
 
 def get_json(url):
@@ -105,7 +73,7 @@ def count_commits(now):
 def mood_for(count, day):
     roll = int(hashlib.sha256(day.isoformat().encode()).hexdigest(), 16) % 100
     if roll < EASTER_EGG_PERCENT:
-        return "fell over"
+        return "fell-over"
     if count == 0:
         return "sleeping"
     if count <= 5:
@@ -115,15 +83,30 @@ def mood_for(count, day):
     return "overheating"
 
 
-def render(mood, count):
-    art = ROBOTS[mood].strip("\n")
-    return f"{START}\n```\n{art}\n```\n{CAPTIONS[mood].format(count=count)}\n{END}"
+def render(mood, count, day):
+    commits = "commit" if count == 1 else "commits"
+    return "\n".join([
+        START,
+        '<p align="center">',
+        f'  <img src="assets/{mood}.svg" alt="{ALTS[mood]}" width="220"><br>',
+        f"  <b>{LABELS[mood]}</b>: {count} {commits} in the last 7 days<br>",
+        f"  <sub>This robot updates itself every day from my public GitHub activity. "
+        f'<a href="{WORKFLOW_URL}">See how</a>. {DATE_PREFIX}{day.isoformat()}.</sub>',
+        "</p>",
+        END,
+    ])
+
+
+def without_date(block):
+    """The block with its date removed, so a new day alone is not a change."""
+    i = block.find(DATE_PREFIX)
+    return block if i == -1 else block[:i] + block[i + len(DATE_PREFIX) + 10:]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--readme", default=os.path.join(os.path.dirname(__file__), "..", "README.md"))
-    parser.add_argument("--mood", choices=sorted(ROBOTS))
+    parser.add_argument("--mood", choices=MOODS)
     parser.add_argument("--count", type=int)
     parser.add_argument("--print", action="store_true", help="print the block instead of writing")
     args = parser.parse_args()
@@ -131,7 +114,7 @@ def main():
     now = dt.datetime.now(dt.timezone.utc)
     count = args.count if args.count is not None else count_commits(now)
     mood = args.mood or mood_for(count, now.date())
-    block = render(mood, count)
+    block = render(mood, count, now.date())
 
     if args.print:
         print(block)
@@ -142,12 +125,12 @@ def main():
     start, end = text.find(START), text.find(END)
     if start == -1 or end == -1 or end < start:
         sys.exit(f"robot markers not found in {args.readme}")
-    updated = text[:start] + block + text[end + len(END):]
-    if updated == text:
+    current = text[start:end + len(END)]
+    if without_date(current) == without_date(block):
         print(f"unchanged: {mood}, {count} commits")
         return 0
     with open(args.readme, "w", encoding="utf-8", newline="") as f:
-        f.write(updated)
+        f.write(text[:start] + block + text[end + len(END):])
     print(f"updated: {mood}, {count} commits")
     return 0
 
