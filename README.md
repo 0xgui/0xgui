@@ -2,8 +2,8 @@
 
 <!-- robot:start -->
 <p align="center">
-  <img src="assets/ascending.svg" alt="Robot is ascending" width="220"><br>
-  <b>Ascending</b>: 21 commits in the last 7 days<br>
+  <img src="assets/robot.svg" alt="Robot is ascending at power level 1, evolution Antenna, 1-day streak" width="220"><br>
+  <b>Ascending, power level 1</b>: 21 commits in the last 7 days. 1-day streak. Evolution: Antenna (74 commits in the last year).<br>
   <sub>This robot updates itself every day from my public GitHub activity. <a href="https://github.com/0xgui/0xgui/actions/workflows/robot.yml">See how</a>. Last changed 2026-10-15.</sub>
 </p>
 <!-- robot:end -->
